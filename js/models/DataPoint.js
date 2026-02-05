@@ -61,7 +61,7 @@ export class DataPoint {
     if (this.speedMbps === null) {
       return 'offline';
     }
-    if (this.speedMbps >= 5) {
+    if (this.speedMbps >= 2) {
       return 'good';
     }
     if (this.speedMbps >= 1) {
