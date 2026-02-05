@@ -76,7 +76,7 @@ export class CollectorView {
   updateUI() {
     if (this.isRecording) {
       this.elements.view.classList.add('recording');
-      this.elements.status.textContent = 'Recording...';
+      this.elements.status.textContent = 'Measuring...';
       this.elements.startBtn.disabled = true;
       this.elements.stopBtn.disabled = false;
       this.elements.journeyName.disabled = true;
@@ -110,7 +110,7 @@ export class CollectorView {
    * Renders an empty list message.
    */
   renderEmptyList() {
-    this.elements.dataPointsList.innerHTML = '<li class="empty-message">No data points recorded yet</li>';
+    this.elements.dataPointsList.innerHTML = '<li class="empty-message">No data points measured yet</li>';
   }
 
   /**
@@ -180,7 +180,7 @@ export class CollectorView {
       // Request location permission first
       const hasPermission = await this.geolocationService.requestPermission();
       if (!hasPermission) {
-        this.showError('Location permission is required to record a journey.');
+        this.showError('Location permission is required to measure a journey.');
         return;
       }
 
@@ -233,7 +233,7 @@ export class CollectorView {
       return;
     }
 
-    if (!confirm('Stop recording this journey?')) {
+    if (!confirm('Stop measuring this journey?')) {
       return;
     }
 
