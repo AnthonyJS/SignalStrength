@@ -15,6 +15,7 @@ export class MapView {
     this.markersLayer = null;
     this.polylineLayer = null;
     this.currentJourney = null;
+    this.userHasZoomed = false;
 
     this.elements = {
       view: document.getElementById('map-view'),
@@ -61,13 +62,23 @@ export class MapView {
     }
 
     // Initialize Leaflet map centered on a default location
-    this.map = L.map(this.elements.mapContainer).setView([37.7749, -122.4194], 13);
+    this.map = L.map(this.elements.mapContainer, {
+      doubleTapDragZoom: 'center'
+    }).setView([37.7749, -122.4194], 13);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19
     }).addTo(this.map);
+
+    // Track user-initiated zoom/pan to avoid overriding their view
+    this.map.on('zoomstart', () => {
+      this.userHasZoomed = true;
+    });
+    this.map.on('dragstart', () => {
+      this.userHasZoomed = true;
+    });
 
     // Create layer groups for markers and polylines
     this.markersLayer = L.layerGroup().addTo(this.map);
@@ -80,6 +91,9 @@ export class MapView {
   async onShow() {
     // Initialize map if needed (must be done when visible)
     this.initMap();
+
+    // Reset user zoom flag so we auto-fit on tab switch
+    this.userHasZoomed = false;
 
     // Refresh journey list and auto-select the most recent
     await this.refreshJourneyList(true);
@@ -250,9 +264,11 @@ export class MapView {
       this.polylineLayer.addLayer(polyline);
     }
 
-    // Pan to include new point
-    const allLatLngs = journey.dataPoints.map(p => [p.latitude, p.longitude]);
-    this.map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+    // Only auto-fit if the user hasn't manually zoomed/panned
+    if (!this.userHasZoomed) {
+      const allLatLngs = journey.dataPoints.map(p => [p.latitude, p.longitude]);
+      this.map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+    }
   }
 
   /**
