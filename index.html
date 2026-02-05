@@ -24,6 +24,14 @@
     <main id="main-content">
       <!-- Collector View -->
       <section id="collector-view" class="view active">
+        <div class="controls">
+          <button id="start-btn" class="btn btn-primary">Start Recording</button>
+          <button id="stop-btn" class="btn btn-danger" disabled>Stop Recording</button>
+        </div>
+        <div class="journey-name-input">
+          <label for="journey-name">Journey Name</label>
+          <input type="text" id="journey-name" placeholder="Morning Commute">
+        </div>
         <div class="status-panel">
           <div class="status-item">
             <span class="label">Status</span>
@@ -41,16 +49,6 @@
             <span class="label">Points</span>
             <span id="point-count" class="value">0</span>
           </div>
-        </div>
-
-        <div class="journey-name-input">
-          <label for="journey-name">Journey Name</label>
-          <input type="text" id="journey-name" placeholder="Morning Commute">
-        </div>
-
-        <div class="controls">
-          <button id="start-btn" class="btn btn-primary">Start Recording</button>
-          <button id="stop-btn" class="btn btn-danger" disabled>Stop Recording</button>
         </div>
 
         <div id="error-message" class="error-message" hidden></div>
