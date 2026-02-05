@@ -27,6 +27,7 @@ export class CollectorView {
     this.watchId = null;
     this.latestPosition = null;
     this.wakeLock = null;
+    this.onDataPointRecorded = null;
 
     this.elements = {
       view: document.getElementById('collector-view'),
@@ -303,6 +304,11 @@ export class CollectorView {
 
       // Auto-save after each point
       await this.storageService.saveJourney(this.currentJourney);
+
+      // Notify listeners (e.g. MapView)
+      if (this.onDataPointRecorded) {
+        this.onDataPointRecorded(dataPoint, this.currentJourney);
+      }
 
     } catch (error) {
       // Don't stop recording on individual measurement errors

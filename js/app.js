@@ -28,6 +28,11 @@ class App {
 
     this.currentView = 'collector';
 
+    // Wire up live map updates
+    this.views.collector.onDataPointRecorded = (dataPoint, journey) => {
+      this.views.map.addDataPoint(dataPoint, journey);
+    };
+
     // DOM elements
     this.navTabs = document.querySelectorAll('.nav-tab');
     this.viewElements = document.querySelectorAll('.view');

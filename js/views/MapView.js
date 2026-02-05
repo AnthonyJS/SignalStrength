@@ -193,6 +193,65 @@ export class MapView {
   }
 
   /**
+   * Adds a single data point to the map for a live-recording journey.
+   * @param {DataPoint} dp
+   * @param {Journey} journey
+   */
+  addDataPoint(dp, journey) {
+    // Only update if the map is showing this journey (or no journey yet selected)
+    if (!this.map) {
+      return;
+    }
+
+    // If map is showing a different journey, ignore
+    if (this.currentJourney && this.currentJourney.id !== journey.id) {
+      return;
+    }
+
+    // Update internal reference so dropdown stays in sync
+    this.currentJourney = journey;
+
+    const latlng = [dp.latitude, dp.longitude];
+    const index = journey.dataPoints.length - 1;
+
+    // Add marker
+    const marker = L.circleMarker(latlng, {
+      radius: 8,
+      fillColor: dp.getColor(),
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    });
+
+    const popupContent = `
+      <strong>Point ${index + 1}</strong><br>
+      Time: ${formatTime(dp.timestamp)}<br>
+      Speed: ${formatSpeed(dp.speedMbps)}<br>
+      Connection: ${dp.connectionType}<br>
+      Accuracy: ${Math.round(dp.accuracy)}m
+    `;
+    marker.bindPopup(popupContent);
+    this.markersLayer.addLayer(marker);
+
+    // Update polyline
+    this.polylineLayer.clearLayers();
+    if (journey.dataPoints.length > 1) {
+      const latlngs = journey.dataPoints.map(p => [p.latitude, p.longitude]);
+      const polyline = L.polyline(latlngs, {
+        color: '#2196F3',
+        weight: 3,
+        opacity: 0.6
+      });
+      this.polylineLayer.addLayer(polyline);
+    }
+
+    // Pan to include new point
+    const allLatLngs = journey.dataPoints.map(p => [p.latitude, p.longitude]);
+    this.map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
+  }
+
+  /**
    * Clears all markers and polylines from the map.
    */
   clearMap() {
