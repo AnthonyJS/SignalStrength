@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2196F3">
+  <title>Signal Strength Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-view="collector">Record</button>
+      <button class="nav-tab" data-view="map">Map</button>
+    </nav>
+
+    <main id="main-content">
+      <!-- Collector View -->
+      <section id="collector-view" class="view active">
+        <div class="status-panel">
+          <div class="status-item">
+            <span class="label">Status</span>
+            <span id="recording-status" class="value">Stopped</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Position</span>
+            <span id="current-position" class="value">--</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Speed</span>
+            <span id="current-speed" class="value">-- Mbps</span>
+          </div>
+          <div class="status-item">
+            <span class="label">Points</span>
+            <span id="point-count" class="value">0</span>
+          </div>
+        </div>
+
+        <div class="journey-name-input">
+          <label for="journey-name">Journey Name</label>
+          <input type="text" id="journey-name" placeholder="Morning Commute">
+        </div>
+
+        <div class="controls">
+          <button id="start-btn" class="btn btn-primary">Start Recording</button>
+          <button id="stop-btn" class="btn btn-danger" disabled>Stop Recording</button>
+        </div>
+
+        <div id="error-message" class="error-message" hidden></div>
+
+        <div class="recordings-list">
+          <h3>Recorded Points</h3>
+          <ul id="data-points-list"></ul>
+        </div>
+      </section>
+
+      <!-- Map View -->
+      <section id="map-view" class="view">
+        <div class="map-controls">
+          <select id="journey-select">
+            <option value="">Select a journey...</option>
+          </select>
+          <div class="map-actions">
+            <button id="export-btn" class="btn btn-small" disabled>Export</button>
+            <button id="delete-btn" class="btn btn-small btn-danger" disabled>Delete</button>
+          </div>
+        </div>
+        <div class="import-controls">
+          <label for="import-file" class="btn btn-small">Import JSON</label>
+          <input type="file" id="import-file" accept=".json" hidden>
+        </div>
+        <div id="map"></div>
+        <div class="legend">
+          <span class="legend-item"><span class="dot green"></span> &gt;5 Mbps</span>
+          <span class="legend-item"><span class="dot yellow"></span> 1-5 Mbps</span>
+          <span class="legend-item"><span class="dot red"></span> &lt;1 Mbps</span>
+          <span class="legend-item"><span class="dot grey"></span> Offline</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
