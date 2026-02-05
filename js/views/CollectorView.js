@@ -26,6 +26,7 @@ export class CollectorView {
     this.isRecording = false;
     this.watchId = null;
     this.latestPosition = null;
+    this.wakeLock = null;
 
     this.elements = {
       view: document.getElementById('collector-view'),
@@ -144,6 +145,31 @@ export class CollectorView {
   }
 
   /**
+   * Requests a wake lock to prevent screen from sleeping.
+   */
+  async requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake lock acquired');
+      } catch (err) {
+        console.warn('Wake lock failed:', err);
+      }
+    }
+  }
+
+  /**
+   * Releases the wake lock.
+   */
+  async releaseWakeLock() {
+    if (this.wakeLock) {
+      await this.wakeLock.release();
+      this.wakeLock = null;
+      console.log('Wake lock released');
+    }
+  }
+
+  /**
    * Starts recording a new journey.
    */
   async startRecording() {
@@ -156,6 +182,9 @@ export class CollectorView {
         this.showError('Location permission is required to record a journey.');
         return;
       }
+
+      // Keep screen awake during recording
+      await this.requestWakeLock();
 
       // Create new journey
       const name = this.elements.journeyName.value.trim() || undefined;
@@ -215,6 +244,9 @@ export class CollectorView {
       this.watchId = null;
     }
     this.latestPosition = null;
+
+    // Release wake lock
+    await this.releaseWakeLock();
 
     // End journey
     this.currentJourney.end();
@@ -290,5 +322,6 @@ export class CollectorView {
       this.geolocationService.clearWatch(this.watchId);
       this.watchId = null;
     }
+    this.releaseWakeLock();
   }
 }
