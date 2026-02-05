@@ -130,10 +130,10 @@ export class CollectorView {
       emptyMessage.remove();
     }
 
-    const pointNumber = this.currentJourney?.dataPoints.length || 1;
+    const badgeSpeed = dataPoint.speedMbps === null ? '–' : dataPoint.speedMbps < 1 ? dataPoint.speedMbps.toFixed(1) : Math.round(dataPoint.speedMbps);
     const li = document.createElement('li');
     li.innerHTML = `
-      <span class="point-number" style="background-color: ${dataPoint.getColor()}">${pointNumber}</span>
+      <span class="point-number" style="background-color: ${dataPoint.getColor()}">${badgeSpeed}</span>
       <div class="point-details">
         <div class="point-time">${formatTime(dataPoint.timestamp)}</div>
         <div class="point-info">${formatSpeed(dataPoint.speedMbps)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)}</div>
@@ -229,6 +229,10 @@ export class CollectorView {
    */
   async stopRecording() {
     if (!this.isRecording || !this.currentJourney) {
+      return;
+    }
+
+    if (!confirm('Stop recording this journey?')) {
       return;
     }
 
