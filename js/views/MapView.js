@@ -162,10 +162,9 @@ export class MapView {
       const marker = L.circleMarker(latlng, {
         radius: 8,
         fillColor: dp.getColor(),
-        color: '#fff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
+        color: dp.getColor(),
+        weight: 0,
+        fillOpacity: 0.9
       });
 
       // Add popup with details
@@ -224,10 +223,9 @@ export class MapView {
     const marker = L.circleMarker(latlng, {
       radius: 8,
       fillColor: dp.getColor(),
-      color: '#fff',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.8
+      color: dp.getColor(),
+      weight: 0,
+      fillOpacity: 0.9
     });
 
     const popupContent = `
