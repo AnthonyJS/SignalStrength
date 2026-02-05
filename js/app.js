@@ -47,6 +47,9 @@ class App {
       });
     });
 
+    // Initialize theme
+    this.initTheme();
+
     // Check for geolocation support
     if (!this.services.geolocationService.isSupported()) {
       this.showUnsupportedMessage('Geolocation is not supported by your browser.');
@@ -56,6 +59,35 @@ class App {
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
       console.warn('Geolocation requires HTTPS. Some features may not work.');
     }
+  }
+
+  /**
+   * Initializes the theme from localStorage or system preference.
+   */
+  initTheme() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('theme');
+
+    // Apply saved theme or detect system preference
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+
+    // Bind toggle button
+    themeToggle.addEventListener('click', () => this.toggleTheme());
+  }
+
+  /**
+   * Toggles between light and dark theme.
+   */
+  toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
   }
 
   /**

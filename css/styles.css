@@ -66,6 +66,29 @@ body {
   color: var(--primary-color);
 }
 
+/* Theme Toggle */
+.theme-toggle {
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle .icon-dark {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-dark {
+  display: inline;
+}
+
 /* Main Content */
 #main-content {
   flex: 1;
@@ -265,13 +288,15 @@ body {
 /* Map View */
 .map-controls {
   display: flex;
-  gap: var(--spacing);
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
   margin-bottom: var(--spacing);
 }
 
 .map-controls select {
-  flex: 1;
+  flex: 1 1 100%;
+  min-width: 0;
   padding: 12px;
   font-size: 16px;
   border: 2px solid #e0e0e0;
@@ -350,23 +375,25 @@ body {
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-color: #121212;
-    --card-background: #1e1e1e;
-    --text-color: #e0e0e0;
-    --text-muted: #a0a0a0;
-  }
+/* Dark mode support - manual toggle */
+[data-theme="dark"] {
+  --background-color: #121212;
+  --card-background: #1e1e1e;
+  --text-color: #e0e0e0;
+  --text-muted: #a0a0a0;
+}
 
-  .journey-name-input input,
-  .map-controls select {
-    background-color: var(--card-background);
-    color: var(--text-color);
-    border-color: #333;
-  }
+[data-theme="dark"] .journey-name-input input,
+[data-theme="dark"] .map-controls select {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: #333;
+}
 
-  .error-message {
-    background-color: #2d1b1b;
-  }
+[data-theme="dark"] .error-message {
+  background-color: #2d1b1b;
+}
+
+[data-theme="dark"] .recordings-list li {
+  border-bottom-color: #333;
 }
