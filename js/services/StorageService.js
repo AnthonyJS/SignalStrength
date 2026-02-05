@@ -152,19 +152,29 @@ export class StorageService {
    * Exports a journey as a JSON file download.
    * @param {Journey} journey
    */
-  exportJourney(journey) {
+  async exportJourney(journey) {
     const exportData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
       journey: journey.toJSON()
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const filename = `journey-${journey.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.json`;
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
 
+    // Use Web Share API on iOS/mobile — gives the native share sheet
+    // so the user can explicitly "Save to Files", AirDrop, etc.
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename)] })) {
+      const file = new File([blob], filename, { type: 'application/json' });
+      await navigator.share({ files: [file] });
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `journey-${journey.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.json`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

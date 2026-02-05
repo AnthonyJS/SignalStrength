@@ -295,9 +295,14 @@ export class MapView {
   /**
    * Exports the current journey as JSON.
    */
-  exportCurrentJourney() {
+  async exportCurrentJourney() {
     if (this.currentJourney) {
-      this.storageService.exportJourney(this.currentJourney);
+      try {
+        await this.storageService.exportJourney(this.currentJourney);
+      } catch (e) {
+        // User cancelled the share sheet — not an error
+        if (e.name !== 'AbortError') throw e;
+      }
     }
   }
 
