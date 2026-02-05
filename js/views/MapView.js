@@ -81,13 +81,19 @@ export class MapView {
     // Initialize map if needed (must be done when visible)
     this.initMap();
 
-    // Fix map display issues when shown
-    setTimeout(() => {
-      this.map.invalidateSize();
-    }, 100);
-
     // Refresh journey list and auto-select the most recent
     await this.refreshJourneyList(true);
+
+    // Invalidate size after the view is visible, then re-fit bounds
+    setTimeout(() => {
+      this.map.invalidateSize();
+      if (this.currentJourney?.dataPoints.length > 0) {
+        const bounds = L.latLngBounds(
+          this.currentJourney.dataPoints.map(p => [p.latitude, p.longitude])
+        );
+        this.map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }, 100);
   }
 
   /**
