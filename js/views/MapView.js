@@ -274,7 +274,7 @@ export class MapView {
       this.polylineLayer.addLayer(polyline);
     }
 
-    // Only auto-fit if the user hasn't manually zoomed/panned
+    // Only auto-fit if user hasn't manually zoomed/panned since opening map tab
     if (!this.userHasZoomed && accuratePoints.length > 0) {
       const allLatLngs = accuratePoints.map(p => [p.latitude, p.longitude]);
       this.map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
