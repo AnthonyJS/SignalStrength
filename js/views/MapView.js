@@ -7,9 +7,12 @@ export class MapView {
   /**
    * @param {Object} services
    * @param {StorageService} services.storageService
+   * @param {Object} options
+   * @param {number} [options.maxAccuracy=100] - Max accuracy in meters for displayed points
    */
-  constructor({ storageService }) {
+  constructor({ storageService }, options = {}) {
     this.storageService = storageService;
+    this.maxAccuracy = options.maxAccuracy ?? 100;
 
     this.map = null;
     this.markersLayer = null;
@@ -162,13 +165,16 @@ export class MapView {
     this.currentJourney = journey;
     this.updateButtonStates();
 
-    if (journey.dataPoints.length === 0) {
+    // Filter to only show points with good GPS accuracy
+    const accuratePoints = journey.dataPoints.filter(dp => dp.accuracy <= this.maxAccuracy);
+
+    if (accuratePoints.length === 0) {
       return;
     }
 
-    // Create markers for each data point
+    // Create markers for each accurate data point
     const latlngs = [];
-    journey.dataPoints.forEach((dp, index) => {
+    accuratePoints.forEach((dp, index) => {
       const latlng = [dp.latitude, dp.longitude];
       latlngs.push(latlng);
 
@@ -230,32 +236,36 @@ export class MapView {
     // Update internal reference so dropdown stays in sync
     this.currentJourney = journey;
 
-    const latlng = [dp.latitude, dp.longitude];
-    const index = journey.dataPoints.length - 1;
+    // Only add marker if accuracy is good
+    if (dp.accuracy <= this.maxAccuracy) {
+      const latlng = [dp.latitude, dp.longitude];
+      const index = journey.dataPoints.length - 1;
 
-    // Add marker
-    const marker = L.circleMarker(latlng, {
-      radius: 8,
-      fillColor: dp.getColor(),
-      color: dp.getColor(),
-      weight: 0,
-      fillOpacity: 0.9
-    });
+      // Add marker
+      const marker = L.circleMarker(latlng, {
+        radius: 8,
+        fillColor: dp.getColor(),
+        color: dp.getColor(),
+        weight: 0,
+        fillOpacity: 0.9
+      });
 
-    const popupContent = `
-      <strong>Point ${index + 1}</strong><br>
-      Time: ${formatTime(dp.timestamp)}<br>
-      Speed: ${formatSpeed(dp.speedMbps)}<br>
-      Connection: ${dp.connectionType}<br>
-      Accuracy: ${Math.round(dp.accuracy)}m
-    `;
-    marker.bindPopup(popupContent);
-    this.markersLayer.addLayer(marker);
+      const popupContent = `
+        <strong>Point ${index + 1}</strong><br>
+        Time: ${formatTime(dp.timestamp)}<br>
+        Speed: ${formatSpeed(dp.speedMbps)}<br>
+        Connection: ${dp.connectionType}<br>
+        Accuracy: ${Math.round(dp.accuracy)}m
+      `;
+      marker.bindPopup(popupContent);
+      this.markersLayer.addLayer(marker);
+    }
 
-    // Update polyline
+    // Update polyline using only accurate points
     this.polylineLayer.clearLayers();
-    if (journey.dataPoints.length > 1) {
-      const latlngs = journey.dataPoints.map(p => [p.latitude, p.longitude]);
+    const accuratePoints = journey.dataPoints.filter(p => p.accuracy <= this.maxAccuracy);
+    if (accuratePoints.length > 1) {
+      const latlngs = accuratePoints.map(p => [p.latitude, p.longitude]);
       const polyline = L.polyline(latlngs, {
         color: '#2196F3',
         weight: 3,
@@ -265,8 +275,8 @@ export class MapView {
     }
 
     // Only auto-fit if the user hasn't manually zoomed/panned
-    if (!this.userHasZoomed) {
-      const allLatLngs = journey.dataPoints.map(p => [p.latitude, p.longitude]);
+    if (!this.userHasZoomed && accuratePoints.length > 0) {
+      const allLatLngs = accuratePoints.map(p => [p.latitude, p.longitude]);
       this.map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
     }
   }

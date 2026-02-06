@@ -59,14 +59,14 @@ describe('DataPoint', () => {
   });
 
   describe('getQuality', () => {
-    it('returns "good" for >= 5 Mbps', () => {
-      expect(new DataPoint({ ...validData, speedMbps: 5 }).getQuality()).toBe('good');
+    it('returns "good" for >= 2 Mbps', () => {
+      expect(new DataPoint({ ...validData, speedMbps: 2 }).getQuality()).toBe('good');
       expect(new DataPoint({ ...validData, speedMbps: 100 }).getQuality()).toBe('good');
     });
 
-    it('returns "moderate" for 1-5 Mbps', () => {
+    it('returns "moderate" for 1-2 Mbps', () => {
       expect(new DataPoint({ ...validData, speedMbps: 1 }).getQuality()).toBe('moderate');
-      expect(new DataPoint({ ...validData, speedMbps: 4.9 }).getQuality()).toBe('moderate');
+      expect(new DataPoint({ ...validData, speedMbps: 1.9 }).getQuality()).toBe('moderate');
     });
 
     it('returns "poor" for < 1 Mbps', () => {
@@ -82,7 +82,7 @@ describe('DataPoint', () => {
   describe('getColor', () => {
     it('returns correct colors for each quality', () => {
       expect(new DataPoint({ ...validData, speedMbps: 10 }).getColor()).toBe('#4CAF50');
-      expect(new DataPoint({ ...validData, speedMbps: 3 }).getColor()).toBe('#FFC107');
+      expect(new DataPoint({ ...validData, speedMbps: 1.5 }).getColor()).toBe('#FFC107');
       expect(new DataPoint({ ...validData, speedMbps: 0.5 }).getColor()).toBe('#f44336');
       expect(new DataPoint({ ...validData, speedMbps: null, connectionType: 'offline' }).getColor()).toBe('#9E9E9E');
     });

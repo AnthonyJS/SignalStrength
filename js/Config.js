@@ -23,5 +23,8 @@ export const Config = {
     enableHighAccuracy: true,
     timeout: 10000,
     maximumAge: 0
-  }
+  },
+
+  // Maximum GPS accuracy in meters (points with worse accuracy are skipped)
+  maxAccuracy: 100
 };

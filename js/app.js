@@ -21,9 +21,12 @@ class App {
     // Initialize views with config
     this.views = {
       collector: new CollectorView(this.services, {
-        recordingInterval: Config.recordingInterval
+        recordingInterval: Config.recordingInterval,
+        maxAccuracy: Config.maxAccuracy
       }),
-      map: new MapView(this.services)
+      map: new MapView(this.services, {
+        maxAccuracy: Config.maxAccuracy
+      })
     };
 
     this.currentView = 'collector';
