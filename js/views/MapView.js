@@ -19,6 +19,7 @@ export class MapView {
     this.polylineLayer = null;
     this.currentJourney = null;
     this.userHasZoomed = false;
+    this.showLowAccuracy = false;
 
     this.elements = {
       view: document.getElementById('map-view'),
@@ -26,7 +27,8 @@ export class MapView {
       journeySelect: document.getElementById('journey-select'),
       exportBtn: document.getElementById('export-btn'),
       deleteBtn: document.getElementById('delete-btn'),
-      importFile: document.getElementById('import-file')
+      importFile: document.getElementById('import-file'),
+      accuracyToggle: document.getElementById('show-low-accuracy')
     };
 
     this.bindEvents();
@@ -52,6 +54,13 @@ export class MapView {
       if (e.target.files.length > 0) {
         this.importJourney(e.target.files[0]);
         e.target.value = ''; // Reset file input
+      }
+    });
+
+    this.elements.accuracyToggle.addEventListener('change', (e) => {
+      this.showLowAccuracy = e.target.checked;
+      if (this.currentJourney) {
+        this.renderJourney(this.currentJourney);
       }
     });
   }
@@ -148,7 +157,6 @@ export class MapView {
    * @param {string} journeyId
    */
   async loadJourney(journeyId) {
-    // Clear existing markers and polylines
     this.clearMap();
 
     if (!journeyId) {
@@ -164,27 +172,41 @@ export class MapView {
 
     this.currentJourney = journey;
     this.updateButtonStates();
+    this.renderJourney(journey, true);
+  }
 
-    // Filter to only show points with good GPS accuracy
-    const accuratePoints = journey.dataPoints.filter(dp => dp.accuracy <= this.maxAccuracy);
+  /**
+   * Renders a journey on the map.
+   * @param {Journey} journey
+   * @param {boolean} fitBounds - Whether to fit the map to show all points
+   */
+  renderJourney(journey, fitBounds = false) {
+    this.clearMap();
 
-    if (accuratePoints.length === 0) {
+    // Filter points based on accuracy toggle
+    const points = this.showLowAccuracy
+      ? journey.dataPoints
+      : journey.dataPoints.filter(dp => dp.accuracy <= this.maxAccuracy);
+
+    if (points.length === 0) {
       return;
     }
 
-    // Create markers for each accurate data point
+    // Create markers for each data point
     const latlngs = [];
-    accuratePoints.forEach((dp, index) => {
+    points.forEach((dp, index) => {
       const latlng = [dp.latitude, dp.longitude];
       latlngs.push(latlng);
 
-      // Create colored circle marker
+      const isPoorAccuracy = dp.accuracy > this.maxAccuracy;
+
+      // Create colored circle marker (smaller and more transparent for poor accuracy)
       const marker = L.circleMarker(latlng, {
-        radius: 8,
+        radius: isPoorAccuracy ? 6 : 8,
         fillColor: dp.getColor(),
-        color: dp.getColor(),
-        weight: 0,
-        fillOpacity: 0.9
+        color: isPoorAccuracy ? '#999' : dp.getColor(),
+        weight: isPoorAccuracy ? 1 : 0,
+        fillOpacity: isPoorAccuracy ? 0.5 : 0.9
       });
 
       // Add popup with details
@@ -193,7 +215,7 @@ export class MapView {
         Time: ${formatTime(dp.timestamp)}<br>
         Speed: ${formatSpeed(dp.speedMbps)}<br>
         Connection: ${dp.connectionType}<br>
-        Accuracy: ${Math.round(dp.accuracy)}m
+        Accuracy: ${Math.round(dp.accuracy)}m${isPoorAccuracy ? ' (low)' : ''}
       `;
       marker.bindPopup(popupContent);
 
@@ -211,7 +233,7 @@ export class MapView {
     }
 
     // Fit map to show all points
-    if (latlngs.length > 0) {
+    if (fitBounds && latlngs.length > 0) {
       const bounds = L.latLngBounds(latlngs);
       this.map.fitBounds(bounds, { padding: [50, 50] });
     }
@@ -236,18 +258,21 @@ export class MapView {
     // Update internal reference so dropdown stays in sync
     this.currentJourney = journey;
 
-    // Only add marker if accuracy is good
-    if (dp.accuracy <= this.maxAccuracy) {
+    const isPoorAccuracy = dp.accuracy > this.maxAccuracy;
+    const shouldShowPoint = this.showLowAccuracy || !isPoorAccuracy;
+
+    // Add marker if it should be shown
+    if (shouldShowPoint) {
       const latlng = [dp.latitude, dp.longitude];
       const index = journey.dataPoints.length - 1;
 
-      // Add marker
+      // Create marker (smaller and more transparent for poor accuracy)
       const marker = L.circleMarker(latlng, {
-        radius: 8,
+        radius: isPoorAccuracy ? 6 : 8,
         fillColor: dp.getColor(),
-        color: dp.getColor(),
-        weight: 0,
-        fillOpacity: 0.9
+        color: isPoorAccuracy ? '#999' : dp.getColor(),
+        weight: isPoorAccuracy ? 1 : 0,
+        fillOpacity: isPoorAccuracy ? 0.5 : 0.9
       });
 
       const popupContent = `
@@ -255,17 +280,19 @@ export class MapView {
         Time: ${formatTime(dp.timestamp)}<br>
         Speed: ${formatSpeed(dp.speedMbps)}<br>
         Connection: ${dp.connectionType}<br>
-        Accuracy: ${Math.round(dp.accuracy)}m
+        Accuracy: ${Math.round(dp.accuracy)}m${isPoorAccuracy ? ' (low)' : ''}
       `;
       marker.bindPopup(popupContent);
       this.markersLayer.addLayer(marker);
     }
 
-    // Update polyline using only accurate points
+    // Update polyline using filtered points
     this.polylineLayer.clearLayers();
-    const accuratePoints = journey.dataPoints.filter(p => p.accuracy <= this.maxAccuracy);
-    if (accuratePoints.length > 1) {
-      const latlngs = accuratePoints.map(p => [p.latitude, p.longitude]);
+    const filteredPoints = this.showLowAccuracy
+      ? journey.dataPoints
+      : journey.dataPoints.filter(p => p.accuracy <= this.maxAccuracy);
+    if (filteredPoints.length > 1) {
+      const latlngs = filteredPoints.map(p => [p.latitude, p.longitude]);
       const polyline = L.polyline(latlngs, {
         color: '#2196F3',
         weight: 3,
@@ -275,8 +302,8 @@ export class MapView {
     }
 
     // Only auto-fit if user hasn't manually zoomed/panned since opening map tab
-    if (!this.userHasZoomed && accuratePoints.length > 0) {
-      const allLatLngs = accuratePoints.map(p => [p.latitude, p.longitude]);
+    if (!this.userHasZoomed && filteredPoints.length > 0) {
+      const allLatLngs = filteredPoints.map(p => [p.latitude, p.longitude]);
       this.map.fitBounds(L.latLngBounds(allLatLngs), { padding: [50, 50] });
     }
   }
