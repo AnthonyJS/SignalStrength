@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "serve .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "devDependencies": {
     "jsdom": "^24.0.0",
     "serve": "^14.2.6",
-    "vitest": "^2.0.0"
+    "vitest": "^2.0.0",
+    "wrangler": "^4.83.0"
   },
   "keywords": [
     "signal-strength",
