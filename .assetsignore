@@ -1,0 +1,8 @@
+node_modules
+tests
+docs
+.claude
+vitest.config.js
+package.json
+package-lock.json
+CLAUDE.md

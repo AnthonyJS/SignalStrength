@@ -4,13 +4,14 @@
   "description": "Mobile-first web app to track internet connection quality along train commute routes",
   "type": "module",
   "scripts": {
-    "dev": "npx serve .",
+    "dev": "serve .",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "vitest": "^2.0.0",
-    "jsdom": "^24.0.0"
+    "jsdom": "^24.0.0",
+    "serve": "^14.2.6",
+    "vitest": "^2.0.0"
   },
   "keywords": [
     "signal-strength",
