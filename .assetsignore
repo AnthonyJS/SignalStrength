@@ -6,3 +6,4 @@ vitest.config.js
 package.json
 package-lock.json
 CLAUDE.md
+wrangler.jsonc
