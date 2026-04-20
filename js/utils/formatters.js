@@ -1,16 +1,36 @@
 /**
  * Formats a speed value in Mbps for display.
  * @param {number|null} speedMbps
+ * @param {string} [connectionType] - Used to differentiate offline states.
  * @returns {string}
  */
-export function formatSpeed(speedMbps) {
+export function formatSpeed(speedMbps, connectionType) {
   if (speedMbps === null) {
+    if (connectionType === 'disconnected') return 'Disconnected';
+    if (connectionType === 'no-signal') return 'No signal';
     return 'Offline';
   }
   if (speedMbps >= 10) {
     return `${Math.round(speedMbps)} Mbps`;
   }
   return `${speedMbps.toFixed(1)} Mbps`;
+}
+
+/**
+ * Human-readable label for a connection type.
+ * @param {string} connectionType
+ * @returns {string}
+ */
+export function formatConnectionType(connectionType) {
+  switch (connectionType) {
+    case 'wifi': return 'Wi-Fi';
+    case 'cellular': return 'Cellular';
+    case 'disconnected': return 'Disconnected (tether dropped)';
+    case 'no-signal': return 'No signal (upstream unreachable)';
+    case 'offline': return 'Offline';
+    case 'unknown':
+    default: return 'Unknown';
+  }
 }
 
 /**

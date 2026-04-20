@@ -9,7 +9,10 @@ export class DataPoint {
    * @param {number} data.longitude - GPS longitude (-180 to 180)
    * @param {number} data.accuracy - GPS accuracy in meters
    * @param {number|null} data.speedMbps - Download speed in Mbps, null if offline
-   * @param {string} data.connectionType - 'wifi', 'cellular', 'unknown', or 'offline'
+   * @param {string} data.connectionType - 'wifi', 'cellular', 'unknown',
+   *   'disconnected' (no local network — e.g. tethering dropped),
+   *   'no-signal' (local network up, upstream unreachable — e.g. phone lost
+   *   mobile signal), or 'offline' (legacy data from before the split).
    */
   constructor({ timestamp, latitude, longitude, accuracy, speedMbps, connectionType }) {
     this.timestamp = timestamp;
@@ -47,7 +50,7 @@ export class DataPoint {
       throw new Error('Invalid speedMbps: must be null or a non-negative number');
     }
 
-    const validConnectionTypes = ['wifi', 'cellular', 'unknown', 'offline'];
+    const validConnectionTypes = ['wifi', 'cellular', 'unknown', 'offline', 'disconnected', 'no-signal'];
     if (!validConnectionTypes.includes(this.connectionType)) {
       throw new Error(`Invalid connectionType: must be one of ${validConnectionTypes.join(', ')}`);
     }
@@ -72,14 +75,19 @@ export class DataPoint {
 
   /**
    * Returns the color for map display based on quality.
+   * Offline points are split: 'disconnected' (tether dropped) renders darker
+   * than 'no-signal' (upstream unreachable) so you can tell them apart at a
+   * glance on the map.
    * @returns {string} Hex color code
    */
   getColor() {
+    if (this.speedMbps === null) {
+      return this.connectionType === 'disconnected' ? '#424242' : '#9E9E9E';
+    }
     const colors = {
       good: '#4CAF50',
       moderate: '#FFC107',
-      poor: '#f44336',
-      offline: '#9E9E9E'
+      poor: '#f44336'
     };
     return colors[this.getQuality()];
   }

@@ -102,7 +102,7 @@ export class CollectorView {
    */
   updateDisplay(dataPoint) {
     this.elements.position.textContent = formatPosition(dataPoint.latitude, dataPoint.longitude);
-    this.elements.speed.textContent = formatSpeed(dataPoint.speedMbps);
+    this.elements.speed.textContent = formatSpeed(dataPoint.speedMbps, dataPoint.connectionType);
     this.elements.pointCount.textContent = this.currentJourney?.dataPoints.length || 0;
     this.addDataPointToList(dataPoint);
   }
@@ -140,7 +140,7 @@ export class CollectorView {
       <span class="point-number" style="background-color: ${dataPoint.getColor()}">${badgeSpeed}</span>
       <div class="point-details">
         <div class="point-time">${formatTime(dataPoint.timestamp)}</div>
-        <div class="point-info">${formatSpeed(dataPoint.speedMbps)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)} &middot; <span style="${accuracyStyle}">±${Math.round(dataPoint.accuracy)}m</span></div>
+        <div class="point-info">${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)} &middot; <span style="${accuracyStyle}">±${Math.round(dataPoint.accuracy)}m</span></div>
       </div>
     `;
 

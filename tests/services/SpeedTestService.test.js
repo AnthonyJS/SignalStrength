@@ -44,9 +44,9 @@ describe('SpeedTestService', () => {
   });
 
   describe('getConnectionType', () => {
-    it('returns "offline" when navigator.onLine is false', () => {
+    it('returns "disconnected" when navigator.onLine is false', () => {
       Object.defineProperty(navigator, 'onLine', { value: false });
-      expect(service.getConnectionType()).toBe('offline');
+      expect(service.getConnectionType()).toBe('disconnected');
     });
 
     it('returns "unknown" when connection API is not available', () => {
@@ -72,13 +72,13 @@ describe('SpeedTestService', () => {
   });
 
   describe('measureSpeed', () => {
-    it('returns offline when not online', async () => {
+    it('returns disconnected when not online', async () => {
       Object.defineProperty(navigator, 'onLine', { value: false });
 
       const result = await service.measureSpeed();
 
       expect(result.speedMbps).toBeNull();
-      expect(result.connectionType).toBe('offline');
+      expect(result.connectionType).toBe('disconnected');
     });
 
     it('calculates speed from successful fetch', async () => {
@@ -98,7 +98,7 @@ describe('SpeedTestService', () => {
       expect(result.connectionType).toBe('unknown');
     });
 
-    it('handles fetch timeout', async () => {
+    it('reports no-signal when fetch times out but onLine stays true', async () => {
       vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
         const error = new Error('Aborted');
         error.name = 'AbortError';
@@ -108,15 +108,29 @@ describe('SpeedTestService', () => {
       const result = await service.measureSpeed();
 
       expect(result.speedMbps).toBeNull();
-      expect(result.connectionType).toBe('offline');
+      expect(result.connectionType).toBe('no-signal');
     });
 
-    it('handles network errors', async () => {
+    it('reports disconnected when fetch fails and onLine flipped to false', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+        // Simulate tether drop during the fetch.
+        Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+        return Promise.reject(new Error('Network error'));
+      });
+
+      const result = await service.measureSpeed();
+
+      expect(result.speedMbps).toBeNull();
+      expect(result.connectionType).toBe('disconnected');
+    });
+
+    it('reports no-signal on generic network errors while onLine', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
 
       const result = await service.measureSpeed();
 
       expect(result.speedMbps).toBeNull();
+      expect(result.connectionType).toBe('no-signal');
     });
   });
 
@@ -139,12 +153,25 @@ describe('SpeedTestService', () => {
     it('handles all measurements failing', async () => {
       vi.spyOn(service, 'measureSpeed').mockResolvedValue({
         speedMbps: null,
-        connectionType: 'offline'
+        connectionType: 'no-signal'
       });
 
       const result = await service.measureSpeedAverage(3);
 
       expect(result.speedMbps).toBeNull();
+      expect(result.connectionType).toBe('no-signal');
+    });
+
+    it('preserves disconnected state from the last failed measurement', async () => {
+      vi.spyOn(service, 'measureSpeed').mockResolvedValue({
+        speedMbps: null,
+        connectionType: 'disconnected'
+      });
+
+      const result = await service.measureSpeedAverage(2);
+
+      expect(result.speedMbps).toBeNull();
+      expect(result.connectionType).toBe('disconnected');
     });
   });
 });
