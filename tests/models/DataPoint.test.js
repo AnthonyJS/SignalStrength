@@ -26,6 +26,11 @@ describe('DataPoint', () => {
       const dp = new DataPoint({ ...validData, speedMbps: null, connectionType: 'offline' });
       expect(dp.speedMbps).toBeNull();
     });
+
+    it('accepts disconnected and no-signal connection types', () => {
+      expect(() => new DataPoint({ ...validData, speedMbps: null, connectionType: 'disconnected' })).not.toThrow();
+      expect(() => new DataPoint({ ...validData, speedMbps: null, connectionType: 'no-signal' })).not.toThrow();
+    });
   });
 
   describe('validation', () => {
@@ -85,6 +90,14 @@ describe('DataPoint', () => {
       expect(new DataPoint({ ...validData, speedMbps: 1.5 }).getColor()).toBe('#FFC107');
       expect(new DataPoint({ ...validData, speedMbps: 0.5 }).getColor()).toBe('#f44336');
       expect(new DataPoint({ ...validData, speedMbps: null, connectionType: 'offline' }).getColor()).toBe('#9E9E9E');
+    });
+
+    it('renders disconnected darker than no-signal', () => {
+      const disconnected = new DataPoint({ ...validData, speedMbps: null, connectionType: 'disconnected' }).getColor();
+      const noSignal = new DataPoint({ ...validData, speedMbps: null, connectionType: 'no-signal' }).getColor();
+      expect(disconnected).toBe('#424242');
+      expect(noSignal).toBe('#9E9E9E');
+      expect(disconnected).not.toBe(noSignal);
     });
   });
 

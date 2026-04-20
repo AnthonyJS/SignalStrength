@@ -18,12 +18,16 @@ export class SpeedTestService {
   }
 
   /**
-   * Detects the current connection type.
-   * @returns {'wifi'|'cellular'|'unknown'|'offline'}
+   * Detects the current connection type reported by the OS.
+   * Returns 'disconnected' when navigator.onLine is false — on a tethered
+   * laptop this typically means the Wi-Fi/USB tether has dropped, since the
+   * OS only flips onLine to false when the local network interface is gone.
+   * A phone with poor mobile signal but live tethering stays onLine === true.
+   * @returns {'wifi'|'cellular'|'unknown'|'disconnected'}
    */
   getConnectionType() {
     if (!navigator.onLine) {
-      return 'offline';
+      return 'disconnected';
     }
 
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -43,13 +47,17 @@ export class SpeedTestService {
 
   /**
    * Measures the download speed.
+   * When the test cannot complete we distinguish two failure modes:
+   *   - 'disconnected': navigator.onLine is false (local network gone).
+   *   - 'no-signal': onLine is true but the fetch aborted/errored (the
+   *     upstream link — e.g. the phone's mobile signal — is unreachable).
    * @returns {Promise<{speedMbps: number|null, connectionType: string}>}
    */
   async measureSpeed() {
     const connectionType = this.getConnectionType();
 
-    if (connectionType === 'offline') {
-      return { speedMbps: null, connectionType: 'offline' };
+    if (connectionType === 'disconnected') {
+      return { speedMbps: null, connectionType: 'disconnected' };
     }
 
     try {
@@ -86,18 +94,12 @@ export class SpeedTestService {
         connectionType
       };
     } catch (error) {
-      // If aborted (timeout) or network error, return null speed
-      if (error.name === 'AbortError') {
-        return { speedMbps: null, connectionType: 'offline' };
-      }
-
-      // Re-check if we're actually offline
+      // Re-check onLine first: it may have flipped during the fetch.
       if (!navigator.onLine) {
-        return { speedMbps: null, connectionType: 'offline' };
+        return { speedMbps: null, connectionType: 'disconnected' };
       }
-
-      // For other errors, return null with the connection type we detected
-      return { speedMbps: null, connectionType };
+      // Local network is still up but the test failed — upstream link dead.
+      return { speedMbps: null, connectionType: 'no-signal' };
     }
   }
 
@@ -108,22 +110,24 @@ export class SpeedTestService {
    */
   async measureSpeedAverage(count = 3) {
     const results = [];
+    let lastConnectionType = this.getConnectionType();
 
     for (let i = 0; i < count; i++) {
       const result = await this.measureSpeed();
+      lastConnectionType = result.connectionType;
       if (result.speedMbps !== null) {
         results.push(result.speedMbps);
       }
     }
 
     if (results.length === 0) {
-      return { speedMbps: null, connectionType: this.getConnectionType() };
+      return { speedMbps: null, connectionType: lastConnectionType };
     }
 
     const avgSpeed = results.reduce((a, b) => a + b, 0) / results.length;
     return {
       speedMbps: Math.round(avgSpeed * 100) / 100,
-      connectionType: this.getConnectionType()
+      connectionType: lastConnectionType
     };
   }
 }

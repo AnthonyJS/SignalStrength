@@ -1,4 +1,4 @@
-import { formatSpeed, formatTime } from '../utils/formatters.js';
+import { formatSpeed, formatTime, formatConnectionType } from '../utils/formatters.js';
 
 /**
  * View for displaying journey data on a map.
@@ -213,8 +213,8 @@ export class MapView {
       const popupContent = `
         <strong>Point ${index + 1}</strong><br>
         Time: ${formatTime(dp.timestamp)}<br>
-        Speed: ${formatSpeed(dp.speedMbps)}<br>
-        Connection: ${dp.connectionType}<br>
+        Speed: ${formatSpeed(dp.speedMbps, dp.connectionType)}<br>
+        Connection: ${formatConnectionType(dp.connectionType)}<br>
         Accuracy: ${Math.round(dp.accuracy)}m${isPoorAccuracy ? ' (low)' : ''}
       `;
       marker.bindPopup(popupContent);
@@ -278,8 +278,8 @@ export class MapView {
       const popupContent = `
         <strong>Point ${index + 1}</strong><br>
         Time: ${formatTime(dp.timestamp)}<br>
-        Speed: ${formatSpeed(dp.speedMbps)}<br>
-        Connection: ${dp.connectionType}<br>
+        Speed: ${formatSpeed(dp.speedMbps, dp.connectionType)}<br>
+        Connection: ${formatConnectionType(dp.connectionType)}<br>
         Accuracy: ${Math.round(dp.accuracy)}m${isPoorAccuracy ? ' (low)' : ''}
       `;
       marker.bindPopup(popupContent);
