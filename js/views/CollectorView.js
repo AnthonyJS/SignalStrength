@@ -40,8 +40,14 @@ export class CollectorView {
       startBtn: document.getElementById('start-btn'),
       stopBtn: document.getElementById('stop-btn'),
       errorMessage: document.getElementById('error-message'),
-      dataPointsList: document.getElementById('data-points-list')
+      dataPointsList: document.getElementById('data-points-list'),
+      speedOnlyToggle: document.getElementById('speed-only-mode')
     };
+
+    // Speed-only mode skips geolocation entirely — useful when location is
+    // disabled on the device but signal strength is still worth measuring
+    this.speedOnlyMode = localStorage.getItem('speedOnlyMode') === 'true';
+    this.elements.speedOnlyToggle.checked = this.speedOnlyMode;
 
     this.bindEvents();
     this.renderEmptyList();
@@ -53,6 +59,10 @@ export class CollectorView {
   bindEvents() {
     this.elements.startBtn.addEventListener('click', () => this.startRecording());
     this.elements.stopBtn.addEventListener('click', () => this.stopRecording());
+    this.elements.speedOnlyToggle.addEventListener('change', (e) => {
+      this.speedOnlyMode = e.target.checked;
+      localStorage.setItem('speedOnlyMode', String(this.speedOnlyMode));
+    });
   }
 
   /**
@@ -77,16 +87,18 @@ export class CollectorView {
   updateUI() {
     if (this.isRecording) {
       this.elements.view.classList.add('recording');
-      this.elements.status.textContent = 'Measuring...';
+      this.elements.status.textContent = this.speedOnlyMode ? 'Measuring (speed only)...' : 'Measuring...';
       this.elements.startBtn.disabled = true;
       this.elements.stopBtn.disabled = false;
       this.elements.journeyName.disabled = true;
+      this.elements.speedOnlyToggle.disabled = true;
     } else {
       this.elements.view.classList.remove('recording');
       this.elements.status.textContent = 'Stopped';
       this.elements.startBtn.disabled = false;
       this.elements.stopBtn.disabled = true;
       this.elements.journeyName.disabled = false;
+      this.elements.speedOnlyToggle.disabled = false;
     }
 
     if (this.currentJourney) {
@@ -181,16 +193,19 @@ export class CollectorView {
     this.hideError();
 
     try {
-      // Request location access, but don't block recording if it fails —
-      // speed measurements are still useful without GPS coordinates
-      let locationAvailable = false;
-      try {
-        locationAvailable = await this.geolocationService.requestPermission();
-      } catch (geoError) {
-        console.warn('Location unavailable:', geoError.message);
-      }
-      if (!locationAvailable) {
-        this.showError('Location unavailable — measuring speed without GPS coordinates. Points will not appear on the map.');
+      // Request location access unless the user opted into speed-only mode.
+      // Either way, don't block recording if location fails — speed
+      // measurements are still useful without GPS coordinates
+      if (!this.speedOnlyMode) {
+        let locationAvailable = false;
+        try {
+          locationAvailable = await this.geolocationService.requestPermission();
+        } catch (geoError) {
+          console.warn('Location unavailable:', geoError.message);
+        }
+        if (!locationAvailable) {
+          this.showError('Location unavailable — measuring speed without GPS coordinates. Points will not appear on the map. Tip: turn on speed-only mode to skip this check.');
+        }
       }
 
       // Keep screen awake during recording
@@ -204,24 +219,28 @@ export class CollectorView {
       this.clearList();
       this.updateUI();
 
-      // Start watching position continuously (better for movement tracking)
-      this.watchId = this.geolocationService.watchPosition(
-        (position) => {
-          // Location can start working mid-journey (e.g. user enables it)
-          if (!this.latestPosition) {
-            this.hideError();
+      if (this.speedOnlyMode) {
+        this.elements.position.textContent = formatPosition(null, null);
+      } else {
+        // Start watching position continuously (better for movement tracking)
+        this.watchId = this.geolocationService.watchPosition(
+          (position) => {
+            // Location can start working mid-journey (e.g. user enables it)
+            if (!this.latestPosition) {
+              this.hideError();
+            }
+            this.latestPosition = position;
+            // Update position display in real-time
+            this.elements.position.textContent = formatPosition(position.latitude, position.longitude);
+          },
+          (error) => {
+            console.error('Position watch error:', error);
           }
-          this.latestPosition = position;
-          // Update position display in real-time
-          this.elements.position.textContent = formatPosition(position.latitude, position.longitude);
-        },
-        (error) => {
-          console.error('Position watch error:', error);
-        }
-      );
+        );
 
-      // Wait briefly for first position
-      await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait briefly for first position
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
 
       // Take first measurement immediately
       await this.recordDataPoint();
@@ -295,9 +314,10 @@ export class CollectorView {
 
     try {
       // Use latest position from watcher, or get current if not available.
-      // Record without coordinates when location is disabled or unavailable.
+      // Record without coordinates in speed-only mode or when location is
+      // disabled or unavailable.
       let position = this.latestPosition;
-      if (!position) {
+      if (!position && !this.speedOnlyMode) {
         try {
           position = await this.geolocationService.getCurrentPosition();
         } catch (geoError) {
