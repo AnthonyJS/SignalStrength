@@ -49,6 +49,9 @@ export class CollectorView {
     this.speedOnlyMode = localStorage.getItem('speedOnlyMode') === 'true';
     this.elements.speedOnlyToggle.checked = this.speedOnlyMode;
 
+    // Original page title, restored when recording stops
+    this.baseTitle = document.title;
+
     this.bindEvents();
     this.renderEmptyList();
   }
@@ -115,8 +118,28 @@ export class CollectorView {
   updateDisplay(dataPoint) {
     this.elements.position.textContent = formatPosition(dataPoint.latitude, dataPoint.longitude);
     this.elements.speed.textContent = formatSpeed(dataPoint.speedMbps, dataPoint.connectionType);
+    this.elements.speed.style.color = dataPoint.getColor();
     this.elements.pointCount.textContent = this.currentJourney?.dataPoints.length || 0;
     this.addDataPointToList(dataPoint);
+    this.updatePageTitle(dataPoint);
+  }
+
+  /**
+   * Shows the latest reading in the page title so it's visible on the
+   * browser tab even when the tab isn't focused.
+   * @param {DataPoint} dataPoint
+   */
+  updatePageTitle(dataPoint) {
+    const qualityDots = { good: '🟢', moderate: '🟡', poor: '🔴', offline: '⚪' };
+    const dot = qualityDots[dataPoint.getQuality()];
+    document.title = `${dot} ${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} – ${this.baseTitle}`;
+  }
+
+  /**
+   * Restores the original page title.
+   */
+  resetPageTitle() {
+    document.title = this.baseTitle;
   }
 
   /**
@@ -300,6 +323,8 @@ export class CollectorView {
     this.elements.journeyName.value = '';
     this.elements.position.textContent = '--';
     this.elements.speed.textContent = '-- Mbps';
+    this.elements.speed.style.color = '';
+    this.resetPageTitle();
     this.renderEmptyList();
     this.updateUI();
   }
@@ -356,6 +381,7 @@ export class CollectorView {
       // Show error but keep recording
       this.elements.position.textContent = 'Error';
       this.elements.speed.textContent = 'Error';
+      this.elements.speed.style.color = '';
     }
   }
 
@@ -371,6 +397,7 @@ export class CollectorView {
       this.geolocationService.clearWatch(this.watchId);
       this.watchId = null;
     }
+    this.resetPageTitle();
     this.releaseWakeLock();
   }
 }
