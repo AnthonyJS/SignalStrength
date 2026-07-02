@@ -1,3 +1,5 @@
+.git
+.wrangler
 node_modules
 tests
 docs
