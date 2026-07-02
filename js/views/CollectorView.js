@@ -133,14 +133,15 @@ export class CollectorView {
     }
 
     const badgeSpeed = dataPoint.speedMbps === null ? '–' : dataPoint.speedMbps < 1 ? dataPoint.speedMbps.toFixed(1) : Math.round(dataPoint.speedMbps);
-    const isPoorAccuracy = dataPoint.accuracy > this.maxAccuracy;
+    const isPoorAccuracy = dataPoint.hasLocation() && dataPoint.accuracy > this.maxAccuracy;
     const accuracyStyle = isPoorAccuracy ? 'color: #f44336; font-weight: 600' : '';
+    const accuracyText = dataPoint.accuracy === null ? 'no GPS' : `±${Math.round(dataPoint.accuracy)}m`;
     const li = document.createElement('li');
     li.innerHTML = `
       <span class="point-number" style="background-color: ${dataPoint.getColor()}">${badgeSpeed}</span>
       <div class="point-details">
         <div class="point-time">${formatTime(dataPoint.timestamp)}</div>
-        <div class="point-info">${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)} &middot; <span style="${accuracyStyle}">±${Math.round(dataPoint.accuracy)}m</span></div>
+        <div class="point-info">${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)} &middot; <span style="${accuracyStyle}">${accuracyText}</span></div>
       </div>
     `;
 
@@ -180,11 +181,16 @@ export class CollectorView {
     this.hideError();
 
     try {
-      // Request location permission first
-      const hasPermission = await this.geolocationService.requestPermission();
-      if (!hasPermission) {
-        this.showError('Location permission is required to measure a journey.');
-        return;
+      // Request location access, but don't block recording if it fails —
+      // speed measurements are still useful without GPS coordinates
+      let locationAvailable = false;
+      try {
+        locationAvailable = await this.geolocationService.requestPermission();
+      } catch (geoError) {
+        console.warn('Location unavailable:', geoError.message);
+      }
+      if (!locationAvailable) {
+        this.showError('Location unavailable — measuring speed without GPS coordinates. Points will not appear on the map.');
       }
 
       // Keep screen awake during recording
@@ -201,6 +207,10 @@ export class CollectorView {
       // Start watching position continuously (better for movement tracking)
       this.watchId = this.geolocationService.watchPosition(
         (position) => {
+          // Location can start working mid-journey (e.g. user enables it)
+          if (!this.latestPosition) {
+            this.hideError();
+          }
           this.latestPosition = position;
           // Update position display in real-time
           this.elements.position.textContent = formatPosition(position.latitude, position.longitude);
@@ -284,10 +294,16 @@ export class CollectorView {
     }
 
     try {
-      // Use latest position from watcher, or get current if not available
+      // Use latest position from watcher, or get current if not available.
+      // Record without coordinates when location is disabled or unavailable.
       let position = this.latestPosition;
       if (!position) {
-        position = await this.geolocationService.getCurrentPosition();
+        try {
+          position = await this.geolocationService.getCurrentPosition();
+        } catch (geoError) {
+          console.warn('Recording data point without location:', geoError.message);
+          position = null;
+        }
       }
 
       // Measure speed
@@ -295,9 +311,9 @@ export class CollectorView {
 
       const dataPoint = new DataPoint({
         timestamp: Date.now(),
-        latitude: position.latitude,
-        longitude: position.longitude,
-        accuracy: position.accuracy,
+        latitude: position?.latitude ?? null,
+        longitude: position?.longitude ?? null,
+        accuracy: position?.accuracy ?? null,
         speedMbps: speedResult.speedMbps,
         connectionType: speedResult.connectionType
       });

@@ -31,6 +31,24 @@ describe('DataPoint', () => {
       expect(() => new DataPoint({ ...validData, speedMbps: null, connectionType: 'disconnected' })).not.toThrow();
       expect(() => new DataPoint({ ...validData, speedMbps: null, connectionType: 'no-signal' })).not.toThrow();
     });
+
+    it('accepts null location when geolocation is unavailable', () => {
+      const dp = new DataPoint({ ...validData, latitude: null, longitude: null, accuracy: null });
+      expect(dp.latitude).toBeNull();
+      expect(dp.longitude).toBeNull();
+      expect(dp.accuracy).toBeNull();
+    });
+  });
+
+  describe('hasLocation', () => {
+    it('returns true when coordinates are present', () => {
+      expect(new DataPoint(validData).hasLocation()).toBe(true);
+    });
+
+    it('returns false when coordinates are null', () => {
+      const dp = new DataPoint({ ...validData, latitude: null, longitude: null, accuracy: null });
+      expect(dp.hasLocation()).toBe(false);
+    });
   });
 
   describe('validation', () => {
@@ -47,6 +65,11 @@ describe('DataPoint', () => {
     it('throws on invalid longitude', () => {
       expect(() => new DataPoint({ ...validData, longitude: -181 })).toThrow('Invalid longitude');
       expect(() => new DataPoint({ ...validData, longitude: 181 })).toThrow('Invalid longitude');
+    });
+
+    it('throws when only one coordinate is null', () => {
+      expect(() => new DataPoint({ ...validData, latitude: null })).toThrow('Invalid coordinates');
+      expect(() => new DataPoint({ ...validData, longitude: null })).toThrow('Invalid coordinates');
     });
 
     it('throws on invalid accuracy', () => {
@@ -102,6 +125,14 @@ describe('DataPoint', () => {
   });
 
   describe('toJSON / fromJSON', () => {
+    it('round-trips a point without location', () => {
+      const dp = new DataPoint({ ...validData, latitude: null, longitude: null, accuracy: null });
+      const restored = DataPoint.fromJSON(dp.toJSON());
+      expect(restored.latitude).toBeNull();
+      expect(restored.longitude).toBeNull();
+      expect(restored.accuracy).toBeNull();
+    });
+
     it('round-trips correctly', () => {
       const dp = new DataPoint(validData);
       const json = dp.toJSON();
