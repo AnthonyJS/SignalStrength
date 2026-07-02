@@ -1,6 +1,7 @@
 import { Journey } from '../models/Journey.js';
 import { DataPoint } from '../models/DataPoint.js';
 import { formatSpeed, formatPosition, formatTime } from '../utils/formatters.js';
+import { BackgroundTimer } from '../utils/BackgroundTimer.js';
 
 /**
  * View for recording journey data.
@@ -23,7 +24,8 @@ export class CollectorView {
     this.maxAccuracy = options.maxAccuracy ?? 100; // meters
 
     this.currentJourney = null;
-    this.intervalId = null;
+    // Worker-backed timer so measurements keep their cadence in background tabs
+    this.timer = new BackgroundTimer();
     this.isRecording = false;
     this.watchId = null;
     this.latestPosition = null;
@@ -132,7 +134,12 @@ export class CollectorView {
   updatePageTitle(dataPoint) {
     const qualityDots = { good: '🟢', moderate: '🟡', poor: '🔴', offline: '⚪' };
     const dot = qualityDots[dataPoint.getQuality()];
-    document.title = `${dot} ${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} – ${this.baseTitle}`;
+    // Include the measurement time so a stale reading is recognisable
+    const time = new Date(dataPoint.timestamp).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    document.title = `${dot} ${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} ${time} – ${this.baseTitle}`;
   }
 
   /**
@@ -269,7 +276,7 @@ export class CollectorView {
       await this.recordDataPoint();
 
       // Start interval for subsequent measurements
-      this.intervalId = setInterval(() => {
+      this.timer.start(() => {
         this.recordDataPoint();
       }, this.recordingInterval);
 
@@ -293,10 +300,7 @@ export class CollectorView {
     }
 
     // Stop interval
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
+    this.timer.stop();
 
     // Stop watching position
     if (this.watchId !== null) {
@@ -389,10 +393,7 @@ export class CollectorView {
    * Cleans up when view is hidden.
    */
   destroy() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
+    this.timer.stop();
     if (this.watchId !== null) {
       this.geolocationService.clearWatch(this.watchId);
       this.watchId = null;
