@@ -40,8 +40,17 @@ export class CollectorView {
       startBtn: document.getElementById('start-btn'),
       stopBtn: document.getElementById('stop-btn'),
       errorMessage: document.getElementById('error-message'),
-      dataPointsList: document.getElementById('data-points-list')
+      dataPointsList: document.getElementById('data-points-list'),
+      speedOnlyToggle: document.getElementById('speed-only-mode')
     };
+
+    // Speed-only mode skips geolocation entirely — useful when location is
+    // disabled on the device but signal strength is still worth measuring
+    this.speedOnlyMode = localStorage.getItem('speedOnlyMode') === 'true';
+    this.elements.speedOnlyToggle.checked = this.speedOnlyMode;
+
+    // Original page title, restored when recording stops
+    this.baseTitle = document.title;
 
     this.bindEvents();
     this.renderEmptyList();
@@ -53,6 +62,10 @@ export class CollectorView {
   bindEvents() {
     this.elements.startBtn.addEventListener('click', () => this.startRecording());
     this.elements.stopBtn.addEventListener('click', () => this.stopRecording());
+    this.elements.speedOnlyToggle.addEventListener('change', (e) => {
+      this.speedOnlyMode = e.target.checked;
+      localStorage.setItem('speedOnlyMode', String(this.speedOnlyMode));
+    });
   }
 
   /**
@@ -77,16 +90,18 @@ export class CollectorView {
   updateUI() {
     if (this.isRecording) {
       this.elements.view.classList.add('recording');
-      this.elements.status.textContent = 'Measuring...';
+      this.elements.status.textContent = this.speedOnlyMode ? 'Measuring (speed only)...' : 'Measuring...';
       this.elements.startBtn.disabled = true;
       this.elements.stopBtn.disabled = false;
       this.elements.journeyName.disabled = true;
+      this.elements.speedOnlyToggle.disabled = true;
     } else {
       this.elements.view.classList.remove('recording');
       this.elements.status.textContent = 'Stopped';
       this.elements.startBtn.disabled = false;
       this.elements.stopBtn.disabled = true;
       this.elements.journeyName.disabled = false;
+      this.elements.speedOnlyToggle.disabled = false;
     }
 
     if (this.currentJourney) {
@@ -103,8 +118,28 @@ export class CollectorView {
   updateDisplay(dataPoint) {
     this.elements.position.textContent = formatPosition(dataPoint.latitude, dataPoint.longitude);
     this.elements.speed.textContent = formatSpeed(dataPoint.speedMbps, dataPoint.connectionType);
+    this.elements.speed.style.color = dataPoint.getColor();
     this.elements.pointCount.textContent = this.currentJourney?.dataPoints.length || 0;
     this.addDataPointToList(dataPoint);
+    this.updatePageTitle(dataPoint);
+  }
+
+  /**
+   * Shows the latest reading in the page title so it's visible on the
+   * browser tab even when the tab isn't focused.
+   * @param {DataPoint} dataPoint
+   */
+  updatePageTitle(dataPoint) {
+    const qualityDots = { good: '🟢', moderate: '🟡', poor: '🔴', offline: '⚪' };
+    const dot = qualityDots[dataPoint.getQuality()];
+    document.title = `${dot} ${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} – ${this.baseTitle}`;
+  }
+
+  /**
+   * Restores the original page title.
+   */
+  resetPageTitle() {
+    document.title = this.baseTitle;
   }
 
   /**
@@ -133,14 +168,15 @@ export class CollectorView {
     }
 
     const badgeSpeed = dataPoint.speedMbps === null ? '–' : dataPoint.speedMbps < 1 ? dataPoint.speedMbps.toFixed(1) : Math.round(dataPoint.speedMbps);
-    const isPoorAccuracy = dataPoint.accuracy > this.maxAccuracy;
+    const isPoorAccuracy = dataPoint.hasLocation() && dataPoint.accuracy > this.maxAccuracy;
     const accuracyStyle = isPoorAccuracy ? 'color: #f44336; font-weight: 600' : '';
+    const accuracyText = dataPoint.accuracy === null ? 'no GPS' : `±${Math.round(dataPoint.accuracy)}m`;
     const li = document.createElement('li');
     li.innerHTML = `
       <span class="point-number" style="background-color: ${dataPoint.getColor()}">${badgeSpeed}</span>
       <div class="point-details">
         <div class="point-time">${formatTime(dataPoint.timestamp)}</div>
-        <div class="point-info">${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)} &middot; <span style="${accuracyStyle}">±${Math.round(dataPoint.accuracy)}m</span></div>
+        <div class="point-info">${formatSpeed(dataPoint.speedMbps, dataPoint.connectionType)} &middot; ${formatPosition(dataPoint.latitude, dataPoint.longitude)} &middot; <span style="${accuracyStyle}">${accuracyText}</span></div>
       </div>
     `;
 
@@ -180,11 +216,19 @@ export class CollectorView {
     this.hideError();
 
     try {
-      // Request location permission first
-      const hasPermission = await this.geolocationService.requestPermission();
-      if (!hasPermission) {
-        this.showError('Location permission is required to measure a journey.');
-        return;
+      // Request location access unless the user opted into speed-only mode.
+      // Either way, don't block recording if location fails — speed
+      // measurements are still useful without GPS coordinates
+      if (!this.speedOnlyMode) {
+        let locationAvailable = false;
+        try {
+          locationAvailable = await this.geolocationService.requestPermission();
+        } catch (geoError) {
+          console.warn('Location unavailable:', geoError.message);
+        }
+        if (!locationAvailable) {
+          this.showError('Location unavailable — measuring speed without GPS coordinates. Points will not appear on the map. Tip: turn on speed-only mode to skip this check.');
+        }
       }
 
       // Keep screen awake during recording
@@ -198,20 +242,28 @@ export class CollectorView {
       this.clearList();
       this.updateUI();
 
-      // Start watching position continuously (better for movement tracking)
-      this.watchId = this.geolocationService.watchPosition(
-        (position) => {
-          this.latestPosition = position;
-          // Update position display in real-time
-          this.elements.position.textContent = formatPosition(position.latitude, position.longitude);
-        },
-        (error) => {
-          console.error('Position watch error:', error);
-        }
-      );
+      if (this.speedOnlyMode) {
+        this.elements.position.textContent = formatPosition(null, null);
+      } else {
+        // Start watching position continuously (better for movement tracking)
+        this.watchId = this.geolocationService.watchPosition(
+          (position) => {
+            // Location can start working mid-journey (e.g. user enables it)
+            if (!this.latestPosition) {
+              this.hideError();
+            }
+            this.latestPosition = position;
+            // Update position display in real-time
+            this.elements.position.textContent = formatPosition(position.latitude, position.longitude);
+          },
+          (error) => {
+            console.error('Position watch error:', error);
+          }
+        );
 
-      // Wait briefly for first position
-      await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait briefly for first position
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
 
       // Take first measurement immediately
       await this.recordDataPoint();
@@ -271,6 +323,8 @@ export class CollectorView {
     this.elements.journeyName.value = '';
     this.elements.position.textContent = '--';
     this.elements.speed.textContent = '-- Mbps';
+    this.elements.speed.style.color = '';
+    this.resetPageTitle();
     this.renderEmptyList();
     this.updateUI();
   }
@@ -284,10 +338,17 @@ export class CollectorView {
     }
 
     try {
-      // Use latest position from watcher, or get current if not available
+      // Use latest position from watcher, or get current if not available.
+      // Record without coordinates in speed-only mode or when location is
+      // disabled or unavailable.
       let position = this.latestPosition;
-      if (!position) {
-        position = await this.geolocationService.getCurrentPosition();
+      if (!position && !this.speedOnlyMode) {
+        try {
+          position = await this.geolocationService.getCurrentPosition();
+        } catch (geoError) {
+          console.warn('Recording data point without location:', geoError.message);
+          position = null;
+        }
       }
 
       // Measure speed
@@ -295,9 +356,9 @@ export class CollectorView {
 
       const dataPoint = new DataPoint({
         timestamp: Date.now(),
-        latitude: position.latitude,
-        longitude: position.longitude,
-        accuracy: position.accuracy,
+        latitude: position?.latitude ?? null,
+        longitude: position?.longitude ?? null,
+        accuracy: position?.accuracy ?? null,
         speedMbps: speedResult.speedMbps,
         connectionType: speedResult.connectionType
       });
@@ -320,6 +381,7 @@ export class CollectorView {
       // Show error but keep recording
       this.elements.position.textContent = 'Error';
       this.elements.speed.textContent = 'Error';
+      this.elements.speed.style.color = '';
     }
   }
 
@@ -335,6 +397,7 @@ export class CollectorView {
       this.geolocationService.clearWatch(this.watchId);
       this.watchId = null;
     }
+    this.resetPageTitle();
     this.releaseWakeLock();
   }
 }

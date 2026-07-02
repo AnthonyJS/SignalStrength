@@ -18,9 +18,11 @@ A single measurement taken during a journey.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `timestamp` | number | Yes | Unix timestamp in milliseconds |
-| `latitude` | number | Yes | GPS latitude (-90 to 90) |
-| `longitude` | number | Yes | GPS longitude (-180 to 180) |
-| `accuracy` | number | Yes | GPS accuracy in meters |
+| `latitude` | number \| null | Yes | GPS latitude (-90 to 90), null if location unavailable |
+| `longitude` | number \| null | Yes | GPS longitude (-180 to 180), null if location unavailable |
+| `accuracy` | number \| null | Yes | GPS accuracy in meters, null if location unavailable |
+
+Points without location (`latitude`/`longitude` null) are recorded when geolocation is disabled or unavailable. They appear in the collector's data point list but are omitted from the map.
 | `speedMbps` | number \| null | Yes | Download speed in Mbps, null if offline |
 | `connectionType` | string | Yes | One of: 'wifi', 'cellular', 'unknown', 'offline' |
 

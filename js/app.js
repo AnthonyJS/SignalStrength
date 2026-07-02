@@ -60,7 +60,7 @@ class App {
 
     // Check for geolocation support
     if (!this.services.geolocationService.isSupported()) {
-      this.showUnsupportedMessage('Geolocation is not supported by your browser.');
+      this.showUnsupportedMessage('Geolocation is not supported by your browser. You can still measure signal strength with speed-only mode.');
     }
 
     // Check for HTTPS (required for geolocation on most browsers)

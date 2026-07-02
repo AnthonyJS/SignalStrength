@@ -11,7 +11,7 @@ A mobile-first web app that tracks internet connection quality along train commu
 ## Architecture
 
 ### Views
-- **Collector View** - Records journey data (location + speed) at 30-second intervals
+- **Collector View** - Records journey data (location + speed) at 30-second intervals. A speed-only mode toggle skips geolocation entirely for devices with location disabled; those points have null coordinates and are omitted from the map.
 - **Map View** - Visualizes stored journeys with color-coded signal quality markers
 
 ### Key Services

@@ -113,9 +113,10 @@ export class MapView {
     // Invalidate size after the view is visible, then re-fit bounds
     setTimeout(() => {
       this.map.invalidateSize();
-      if (this.currentJourney?.dataPoints.length > 0) {
+      const locatedPoints = this.currentJourney?.dataPoints.filter(p => p.hasLocation()) ?? [];
+      if (locatedPoints.length > 0) {
         const bounds = L.latLngBounds(
-          this.currentJourney.dataPoints.map(p => [p.latitude, p.longitude])
+          locatedPoints.map(p => [p.latitude, p.longitude])
         );
         this.map.fitBounds(bounds, { padding: [50, 50] });
       }
@@ -183,10 +184,11 @@ export class MapView {
   renderJourney(journey, fitBounds = false) {
     this.clearMap();
 
-    // Filter points based on accuracy toggle
+    // Only points with coordinates can be mapped; then filter on accuracy toggle
+    const locatedPoints = journey.dataPoints.filter(dp => dp.hasLocation());
     const points = this.showLowAccuracy
-      ? journey.dataPoints
-      : journey.dataPoints.filter(dp => dp.accuracy <= this.maxAccuracy);
+      ? locatedPoints
+      : locatedPoints.filter(dp => dp.accuracy <= this.maxAccuracy);
 
     if (points.length === 0) {
       return;
@@ -259,7 +261,8 @@ export class MapView {
     this.currentJourney = journey;
 
     const isPoorAccuracy = dp.accuracy > this.maxAccuracy;
-    const shouldShowPoint = this.showLowAccuracy || !isPoorAccuracy;
+    // Points without coordinates can't be plotted
+    const shouldShowPoint = dp.hasLocation() && (this.showLowAccuracy || !isPoorAccuracy);
 
     // Add marker if it should be shown
     if (shouldShowPoint) {
@@ -288,9 +291,10 @@ export class MapView {
 
     // Update polyline using filtered points
     this.polylineLayer.clearLayers();
+    const locatedPoints = journey.dataPoints.filter(p => p.hasLocation());
     const filteredPoints = this.showLowAccuracy
-      ? journey.dataPoints
-      : journey.dataPoints.filter(p => p.accuracy <= this.maxAccuracy);
+      ? locatedPoints
+      : locatedPoints.filter(p => p.accuracy <= this.maxAccuracy);
     if (filteredPoints.length > 1) {
       const latlngs = filteredPoints.map(p => [p.latitude, p.longitude]);
       const polyline = L.polyline(latlngs, {

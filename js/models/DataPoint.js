@@ -5,9 +5,9 @@ export class DataPoint {
   /**
    * @param {Object} data
    * @param {number} data.timestamp - Unix timestamp in milliseconds
-   * @param {number} data.latitude - GPS latitude (-90 to 90)
-   * @param {number} data.longitude - GPS longitude (-180 to 180)
-   * @param {number} data.accuracy - GPS accuracy in meters
+   * @param {number|null} data.latitude - GPS latitude (-90 to 90), null if location unavailable
+   * @param {number|null} data.longitude - GPS longitude (-180 to 180), null if location unavailable
+   * @param {number|null} data.accuracy - GPS accuracy in meters, null if location unavailable
    * @param {number|null} data.speedMbps - Download speed in Mbps, null if offline
    * @param {string} data.connectionType - 'wifi', 'cellular', 'unknown',
    *   'disconnected' (no local network — e.g. tethering dropped),
@@ -34,16 +34,20 @@ export class DataPoint {
       throw new Error('Invalid timestamp: must be a positive number');
     }
 
-    if (typeof this.latitude !== 'number' || this.latitude < -90 || this.latitude > 90) {
-      throw new Error('Invalid latitude: must be between -90 and 90');
+    if ((this.latitude === null) !== (this.longitude === null)) {
+      throw new Error('Invalid coordinates: latitude and longitude must both be set or both be null');
     }
 
-    if (typeof this.longitude !== 'number' || this.longitude < -180 || this.longitude > 180) {
-      throw new Error('Invalid longitude: must be between -180 and 180');
+    if (this.latitude !== null && (typeof this.latitude !== 'number' || this.latitude < -90 || this.latitude > 90)) {
+      throw new Error('Invalid latitude: must be null or between -90 and 90');
     }
 
-    if (typeof this.accuracy !== 'number' || this.accuracy < 0) {
-      throw new Error('Invalid accuracy: must be a non-negative number');
+    if (this.longitude !== null && (typeof this.longitude !== 'number' || this.longitude < -180 || this.longitude > 180)) {
+      throw new Error('Invalid longitude: must be null or between -180 and 180');
+    }
+
+    if (this.accuracy !== null && (typeof this.accuracy !== 'number' || this.accuracy < 0)) {
+      throw new Error('Invalid accuracy: must be null or a non-negative number');
     }
 
     if (this.speedMbps !== null && (typeof this.speedMbps !== 'number' || this.speedMbps < 0)) {
@@ -54,6 +58,15 @@ export class DataPoint {
     if (!validConnectionTypes.includes(this.connectionType)) {
       throw new Error(`Invalid connectionType: must be one of ${validConnectionTypes.join(', ')}`);
     }
+  }
+
+  /**
+   * Whether this point has GPS coordinates (recording works without them
+   * when location is disabled or unavailable).
+   * @returns {boolean}
+   */
+  hasLocation() {
+    return this.latitude !== null && this.longitude !== null;
   }
 
   /**

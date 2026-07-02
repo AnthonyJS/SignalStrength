@@ -35,11 +35,14 @@ export function formatConnectionType(connectionType) {
 
 /**
  * Formats coordinates for display.
- * @param {number} latitude
- * @param {number} longitude
+ * @param {number|null} latitude
+ * @param {number|null} longitude
  * @returns {string}
  */
 export function formatPosition(latitude, longitude) {
+  if (latitude === null || longitude === null) {
+    return 'No location';
+  }
   const lat = latitude.toFixed(5);
   const lng = longitude.toFixed(5);
   const latDir = latitude >= 0 ? 'N' : 'S';

@@ -323,8 +323,9 @@ body {
   margin-bottom: var(--spacing);
 }
 
-/* Accuracy Toggle */
-.accuracy-toggle {
+/* Toggle rows (map accuracy filter, collector speed-only mode) */
+.accuracy-toggle,
+.speed-only-toggle {
   display: flex;
   align-items: center;
   gap: 10px;
