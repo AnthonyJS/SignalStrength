@@ -96,7 +96,7 @@ export function getQualityLabel(speedMbps) {
   if (speedMbps === null) {
     return 'Offline';
   }
-  if (speedMbps >= 5) {
+  if (speedMbps >= 2) {
     return 'Good';
   }
   if (speedMbps >= 1) {

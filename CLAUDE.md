@@ -28,9 +28,12 @@ A mobile-first web app that tracks internet connection quality along train commu
 - `sw.js` serves the app shell stale-while-revalidate so the app opens with no signal; deploys show up on the second launch. In dev, hard-refresh to bypass it.
 - Only URLs listed in `APP_SHELL` / `CDN_ASSETS` are served from cache — never the speed-test download or map tiles. When adding a JS/CSS file or a CDN script, add it to `sw.js` too (`tests/pwa.test.js` enforces this).
 
+### Menu Bar Plugin
+- `menubar/signal-strength.5s.sh` - macOS SwiftBar plugin showing a coloured speed dot in the menu bar. Runs its own speed test, independent of the web app. It copies `Config.speedTest.testUrl` and the ranges and colours from `DataPoint.getQuality()` / `getColor()`, so update both together (`tests/menubar.test.js` checks they match). Excluded from deploys via `.assetsignore`.
+
 ## Speed Thresholds
-- **Good** (green): >= 5 Mbps
-- **Moderate** (yellow): 1-5 Mbps
+- **Good** (green): >= 2 Mbps
+- **Moderate** (yellow): 1-2 Mbps
 - **Poor** (red): < 1 Mbps
 - **Offline** (grey): null/failed test
 
