@@ -7,12 +7,15 @@ the dot to see the measured speed.
 It runs its own speed test (the same ~150 KB download the web app uses), so it
 works without the app open. It doesn't record journeys or show on the map.
 
+The colours and ranges are the same as the markers on the app's map
+(`DataPoint` in `js/models/DataPoint.js`):
+
 | Dot | Meaning |
 |---|---|
-| 🟢 Green | 5 Mbps or more |
-| 🟡 Yellow | 1–5 Mbps |
-| 🟠 Orange | Under 1 Mbps |
-| Light grey | No signal: still connected to Wi-Fi or tethering, but nothing downloads |
+| 🟢 Green | 2 Mbps or more |
+| 🟡 Yellow | 1–2 Mbps |
+| 🔴 Red | Under 1 Mbps |
+| Grey | No signal: still connected to Wi-Fi or tethering, but the test failed or didn't finish in time |
 | Dark grey | Disconnected: no network connection at all |
 
 ## Setup

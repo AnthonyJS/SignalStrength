@@ -5,9 +5,26 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Config } from '../js/Config.js';
+import { DataPoint } from '../js/models/DataPoint.js';
+import { formatSpeed } from '../js/utils/formatters.js';
 
 const SCRIPT = join(import.meta.dirname, '..', 'menubar', 'signal-strength.5s.sh');
-const { good, moderate } = Config.speedThresholds;
+
+/**
+ * What the web app shows for a reading, as menu bar output: the map marker
+ * colour and the speed text.
+ * @param {number|null} measuredMbps - Raw speed, before the app rounds it
+ * @param {string} [connectionType]
+ * @returns {{dot: string, detail: string}}
+ */
+function appShows(measuredMbps, connectionType = 'unknown') {
+  // SpeedTestService rounds to 2 decimals before storing
+  const speedMbps = measuredMbps === null ? null : Math.round(measuredMbps * 100) / 100;
+  const point = new DataPoint({
+    timestamp: Date.now(), latitude: null, longitude: null, accuracy: null, speedMbps, connectionType
+  });
+  return { dot: `●| color=${point.getColor()}`, detail: formatSpeed(speedMbps, connectionType) };
+}
 
 // Runs the plugin with stand-in `route` and `curl` commands on PATH, so each
 // test controls whether there's a network and what the download reports.
@@ -54,40 +71,32 @@ describe('menu bar plugin', () => {
   // 125,000 bytes in one second is exactly 1 Mbps
   const download = (mbps, extra = {}) => ({ STUB_BYTES: String(mbps * 125000), STUB_SECONDS: '1', ...extra });
 
-  it('shows green at the good threshold', () => {
-    expect(run(download(good))).toEqual({ dot: '●| color=#4CAF50', detail: `${good.toFixed(1)} Mbps` });
-  });
+  // Either side of each threshold, plus the app's rounding and number format
+  it.each([0.5, 0.99, 1, 1.5, 1.99, 1.996, 2, 4.2, 12.5, 150])(
+    'shows the same colour and speed as the app at %s Mbps',
+    (mbps) => {
+      expect(run(download(mbps))).toEqual(appShows(mbps));
+    }
+  );
 
-  it('shows yellow just below the good threshold', () => {
-    expect(run(download(good - 0.01)).dot).toBe('●| color=#FFC107');
-  });
-
-  it('shows yellow at the moderate threshold', () => {
-    expect(run(download(moderate)).dot).toBe('●| color=#FFC107');
-  });
-
-  it('shows orange below the moderate threshold', () => {
-    expect(run(download(moderate - 0.01)).dot).toBe('●| color=#FF9800');
-  });
-
-  it('measures a download that timed out part-way as slow, not as no signal', () => {
+  it('treats a download that timed out part-way as no signal, like the app', () => {
     const result = run({ STUB_BYTES: '70000', STUB_SECONDS: '4.0', STUB_CURL_EXIT: '28' });
-    expect(result).toEqual({ dot: '●| color=#FF9800', detail: '0.1 Mbps' });
+    expect(result).toEqual(appShows(null, 'no-signal'));
   });
 
-  it('shows light grey when nothing downloads', () => {
+  it('shows no signal when nothing downloads', () => {
     const result = run({ STUB_BYTES: '0', STUB_SECONDS: '0.2', STUB_CURL_EXIT: '7' });
-    expect(result).toEqual({ dot: '●| color=#BDBDBD', detail: 'No signal' });
+    expect(result).toEqual(appShows(null, 'no-signal'));
   });
 
-  it('shows dark grey without testing when there is no network', () => {
-    const result = run({ ...download(good), STUB_NO_ROUTE: '1' });
-    expect(result).toEqual({ dot: '●| color=#616161', detail: 'Disconnected' });
+  it('shows disconnected without testing when there is no network', () => {
+    const result = run({ ...download(5), STUB_NO_ROUTE: '1' });
+    expect(result).toEqual(appShows(null, 'disconnected'));
     expect(() => readFileSync(join(stubDir, 'curl-args'))).toThrow();
   });
 
   it('downloads the same file as the app, within the refresh interval', () => {
-    run(download(good));
+    run(download(5));
     const args = readFileSync(join(stubDir, 'curl-args'), 'utf8').split('\n');
 
     expect(args.find(arg => arg.startsWith('https://'))).toMatch(`${Config.speedTest.testUrl}?_t=`);

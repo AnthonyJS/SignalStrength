@@ -29,7 +29,7 @@ A mobile-first web app that tracks internet connection quality along train commu
 - Only URLs listed in `APP_SHELL` / `CDN_ASSETS` are served from cache — never the speed-test download or map tiles. When adding a JS/CSS file or a CDN script, add it to `sw.js` too (`tests/pwa.test.js` enforces this).
 
 ### Menu Bar Plugin
-- `menubar/signal-strength.5s.sh` - macOS SwiftBar plugin showing a coloured speed dot in the menu bar. Runs its own speed test, independent of the web app. It copies `Config.speedTest.testUrl` and `Config.speedThresholds`, so update both together (`tests/menubar.test.js` checks they match). Excluded from deploys via `.assetsignore`.
+- `menubar/signal-strength.5s.sh` - macOS SwiftBar plugin showing a coloured speed dot in the menu bar. Runs its own speed test, independent of the web app. It copies `Config.speedTest.testUrl` and the ranges and colours from `DataPoint.getQuality()` / `getColor()`, so update both together (`tests/menubar.test.js` checks they match). Excluded from deploys via `.assetsignore`.
 
 ## Speed Thresholds
 - **Good** (green): >= 5 Mbps

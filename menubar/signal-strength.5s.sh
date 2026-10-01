@@ -9,22 +9,24 @@
 # menu bar. The ".5s." in the filename sets how often SwiftBar runs it.
 # See menubar/README.md for setup.
 #
-# Measures speed like the web app: times a download of the same ~150 KB file.
+# Measures and colours speed like the web app: times a download of the same
+# ~150 KB file and uses the same colours as its map markers.
 # Runs on its own; it doesn't record anything or talk to the app.
 
 # Keep in sync with Config.speedTest.testUrl in js/Config.js
 TEST_URL='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
 # Seconds. Must stay under the refresh interval in the filename.
 TIMEOUT=4
-# Mbps. Keep in sync with Config.speedThresholds in js/Config.js
-GOOD=5
+# Mbps and colours. Keep in sync with DataPoint.getQuality() and
+# DataPoint.getColor() in js/models/DataPoint.js
+GOOD=2
 MODERATE=1
 
 GREEN='#4CAF50'
 YELLOW='#FFC107'
-ORANGE='#FF9800'
-LIGHT_GREY='#BDBDBD'
-DARK_GREY='#616161'
+RED='#f44336'
+GREY='#9E9E9E'
+DARK_GREY='#424242'
 
 # Decimal points must be '.', whatever the system locale
 export LC_ALL=C
@@ -49,28 +51,29 @@ if ! route -n get default 2>/dev/null | grep -q 'interface:'; then
   exit 0
 fi
 
-# curl still reports what it got when it times out, so a very slow link
-# reads as slow rather than as no signal.
-read -r bytes seconds < <(
+# Like the app, a download that fails or doesn't finish in time is no signal
+if ! result=$(
   curl --silent --fail --output /dev/null --max-time "$TIMEOUT" \
     --header 'Cache-Control: no-cache' \
     --write-out '%{size_download} %{time_total}' \
     "$TEST_URL?_t=$(date +%s)"
-)
-
-if ! at_least "${bytes:-0}" 1 || ! at_least "${seconds:-0}" 0.000001; then
-  show "$LIGHT_GREY" 'No signal'
+); then
+  show "$GREY" 'No signal'
   exit 0
 fi
 
-mbps=$(awk -v b="$bytes" -v t="$seconds" 'BEGIN { print b * 8 / t / 1000000 }')
+read -r bytes seconds <<< "$result"
+# Rounded to 2 decimals before classifying, as the app does
+mbps=$(awk -v b="$bytes" -v t="$seconds" 'BEGIN { printf "%.2f", b * 8 / t / 1000000 }')
 
 if at_least "$mbps" "$GOOD"; then
   colour=$GREEN
 elif at_least "$mbps" "$MODERATE"; then
   colour=$YELLOW
 else
-  colour=$ORANGE
+  colour=$RED
 fi
 
-show "$colour" "$(printf '%.1f' "$mbps") Mbps"
+# Same format as the app: whole numbers from 10 Mbps, one decimal below
+speed=$(awk -v m="$mbps" 'BEGIN { if (m >= 10) printf "%d", int(m + 0.5); else printf "%.1f", int(m * 10 + 0.5) / 10 }')
+show "$colour" "$speed Mbps"
