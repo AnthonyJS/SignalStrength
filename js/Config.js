@@ -7,7 +7,7 @@ export const Config = {
 
   // Speed thresholds in Mbps
   speedThresholds: {
-    good: 5,      // >= 5 Mbps = good
+    good: 2,      // >= 2 Mbps = good
     moderate: 1   // >= 1 Mbps = moderate, below = poor
   },
 

@@ -32,8 +32,8 @@ A mobile-first web app that tracks internet connection quality along train commu
 - `menubar/signal-strength.5s.sh` - macOS SwiftBar plugin showing a coloured speed dot in the menu bar. Runs its own speed test, independent of the web app. It copies `Config.speedTest.testUrl` and the ranges and colours from `DataPoint.getQuality()` / `getColor()`, so update both together (`tests/menubar.test.js` checks they match). Excluded from deploys via `.assetsignore`.
 
 ## Speed Thresholds
-- **Good** (green): >= 5 Mbps
-- **Moderate** (yellow): 1-5 Mbps
+- **Good** (green): >= 2 Mbps
+- **Moderate** (yellow): 1-2 Mbps
 - **Poor** (red): < 1 Mbps
 - **Offline** (grey): null/failed test
 

@@ -61,8 +61,8 @@ A collection of data points recorded during a single trip.
 
 | Quality | Speed Range | Color Code |
 |---------|-------------|------------|
-| Good | >= 5 Mbps | Green (#4CAF50) |
-| Moderate | 1 - 5 Mbps | Yellow (#FFC107) |
+| Good | >= 2 Mbps | Green (#4CAF50) |
+| Moderate | 1 - 2 Mbps | Yellow (#FFC107) |
 | Poor | < 1 Mbps | Red (#f44336) |
 | Offline | null | Grey (#9E9E9E) |
 
