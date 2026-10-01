@@ -3,6 +3,7 @@
 node_modules
 tests
 docs
+menubar
 .claude
 vitest.config.js
 package.json
