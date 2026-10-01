@@ -143,3 +143,13 @@ class App {
 document.addEventListener('DOMContentLoaded', () => {
   window.app = new App();
 });
+
+// Register the service worker so the app can be installed and opened offline.
+// Deferred to 'load' so caching the app shell doesn't compete with first paint.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
